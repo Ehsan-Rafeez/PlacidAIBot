@@ -100,6 +100,8 @@ python -m streamlit run app.py
 
 Open the local URL printed in the terminal, normally **http://localhost:8501**. Stop the server with `Ctrl+C`.
 
+The top-right corner shows **v1.1** for this release. If a deployment shows an older version or no badge, verify that the updated code was deployed and the server restarted. Future releases can update `APP_VERSION` in `src/version.py`.
+
 Try:
 
 - What prices are listed for ITC?

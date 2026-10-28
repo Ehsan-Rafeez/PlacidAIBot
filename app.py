@@ -6,6 +6,7 @@ PlacidWay Streamlit Chat Application.
 import streamlit as st
 
 from src.chatbot import ask_chatbot
+from src.version import APP_VERSION
 
 
 # ---------------------------------------
@@ -16,6 +17,28 @@ st.set_page_config(
     page_title="PlacidWay AI Assistant",
     page_icon="🌍",
     layout="centered"
+)
+
+st.markdown(
+    f"""
+    <style>
+        .app-version {{
+            position: fixed;
+            top: 3.5rem;
+            right: 1rem;
+            z-index: 999;
+            padding: 0.25rem 0.6rem;
+            border: 1px solid #718096;
+            border-radius: 0.5rem;
+            background: var(--background-color, #ffffff);
+            color: var(--text-color, #263238);
+            font-size: 0.8rem;
+            pointer-events: none;
+        }}
+    </style>
+    <span class="app-version" aria-label="Application version {APP_VERSION}">v{APP_VERSION}</span>
+    """,
+    unsafe_allow_html=True,
 )
 
 

@@ -149,3 +149,32 @@ def test_followup_uses_table_without_groq_and_preserves_qualifier():
 def test_ordinary_followup_query_remains_contextual():
     query = build_search_query("And what about recovery time?", HISTORY)
     assert "Previous user question" in query and "recovery time" in query
+
+
+@pytest.mark.parametrize("question", [
+    "What prices are listed for cancer treatments at ITC Immunity Therapy Center?",
+    "What prices are listed for cancer treatment at ITC?",
+    "What prices are listed for treatments at ITC Immunity Therapy Center?",
+])
+def test_cancer_price_list_wording_uses_approved_table(question):
+    rows = (
+        "Breast Cancer | Breast Cancer | $18995 | Chat\n"
+        "Prostate Cancer | Prostate Cancer | $20000 | Chat"
+    )
+    item = evidence(rows)[1]
+    document = Document(page_content=item["content"], metadata={"source": URL, "title": item["title"]})
+    with patch("src.chatbot.retrieve_documents", return_value=[(document, 0.1)]), patch(
+        "src.chatbot.get_llm", side_effect=AssertionError("Must use table")
+    ):
+        result = ask_chatbot(question)
+    assert result["status"] == "answered"
+    assert "Breast Cancer: USD 18,995" in result["answer"]
+    assert "Prostate Cancer: USD 20,000" in result["answer"]
+    assert result["sources"][0]["url"] == URL
+
+
+def test_similar_wording_does_not_apply_itc_prices_to_other_clinics():
+    assert answer_listed_prices(
+        "What prices are listed for cancer treatments at another clinic?",
+        evidence("Breast Cancer | Breast Cancer | $18995 | Chat"),
+    ) is None

@@ -211,6 +211,7 @@ def itc_price_request(question, history=None):
     """
     if re.fullmatch(
         r"what\s+(?:prices|pricing)\s+(?:are|is)\s+listed\s+for\s+"
+        r"(?:(?:cancer\s+)?treatments?\s+at\s+)?"
         r"(?:ITC|ITC Immunity Therapy Center)\s*\??",
         question.strip(), re.IGNORECASE,
     ):
