@@ -613,6 +613,43 @@ def validate_grounded_answer(
 # 9. Main chatbot function
 # -------------------------------------------------
 
+def recovery_unknown_response(question, history, evidence):
+    """Explain a missing recovery estimate without inventing one.
+
+    Cite only the retrieved, approved adrenal-package page. This describes
+    what could not be verified, not an exhaustive claim about the website.
+    """
+    explicit_adrenal = bool(re.search(r"\badrenal\s+cancer\b", question, re.IGNORECASE))
+    if not re.search(r"\brecovery\b", question, re.IGNORECASE):
+        return None
+    if not explicit_adrenal:
+        if not re.fullmatch(
+            r"(?:and\s+)?(?:what about|how about|what is|what's)\s+"
+            r"(?:the\s+)?recovery(?:\s+(?:time|period))?\s*\??",
+            question.strip(), re.IGNORECASE,
+        ):
+            return None
+        previous = [
+            item["content"] for item in (history or [])
+            if item.get("role") == "user" and isinstance(item.get("content"), str)
+        ]
+        if not previous or not re.search(r"\badrenal\s+cancer\b", previous[-1], re.IGNORECASE):
+            return None
+
+    approved_urls = get_approved_urls()
+    for item in evidence.values():
+        if "/package/7902/" in item["source"] and validate_source_url(item["source"], approved_urls):
+            return make_response(
+                "For the adrenal cancer package, I couldn't verify a recovery-time "
+                "estimate from the retrieved package information. Treatment duration "
+                "and the timing of a follow-up appointment do not establish recovery "
+                "time. Please ask ITC for guidance specific to your treatment plan.",
+                sources=[{"title": item["title"], "url": item["source"]}],
+                status="unknown",
+            )
+    return None
+
+
 def ask_chatbot(question, history=None):
     """
     Public entry point for the Streamlit UI.
@@ -672,11 +709,16 @@ def ask_chatbot(question, history=None):
         })
 
         # Independently validate the result.
-        return validate_grounded_answer(
+        response = validate_grounded_answer(
             generated,
             evidence,
             question
         )
+        if response["status"] == "unknown":
+            contextual = recovery_unknown_response(question, history, evidence)
+            if contextual is not None:
+                return contextual
+        return response
 
     except Exception:
         # Log details privately; do not expose API keys
