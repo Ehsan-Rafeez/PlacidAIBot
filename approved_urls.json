@@ -1,0 +1,40 @@
+
+{
+  "pages": [
+    {
+      "id": "clinic_profile",
+      "type": "clinic",
+      "url": "https://www.placidway.com/profile/5/Alternative-Cancer-Treatment-by-ITC-Immunity-Therapy-Center"
+    },
+    {
+      "id": "adenocarcinoma_package",
+      "type": "treatment_package",
+      "url": "https://www.placidway.com/package/7903/Alternative-Adenocarcinoma-Cancer-Treatment-Package-in-Tijuana-Mexico-by-ITC"
+    },
+    {
+      "id": "adrenal_cancer_package",
+      "type": "treatment_package",
+      "url": "https://www.placidway.com/package/7902/Alternative-Adrenal-Cancer-Treatment-Package-in-Tijuana-Mexico-by-ITC"
+    },
+    {
+      "id": "anal_cancer_package",
+      "type": "treatment_package",
+      "url": "https://www.placidway.com/package/7901/Alternative-Anal-Cancer-Treatment-Package-in-Tijuana-Mexico-by-ITC"
+    },
+    {
+      "id": "clinic_videos",
+      "type": "clinic_videos",
+      "url": "https://www.placidway.com/profile-videos/5/Alternative-Cancer-Treatment-by-ITC-Immunity-Therapy-Center"
+    },
+    {
+      "id": "clinic_price_list",
+      "type": "price_list",
+      "url": "https://www.placidway.com/price-list/5/Alternative-Cancer-Treatment-by-ITC-Immunity-Therapy-Center"
+    },
+    {
+      "id": "alternative_medicine_comparison",
+      "type": "price_comparison",
+      "url": "https://www.placidway.com/search-medical-pricings/Alternative-Medicine/All/1"
+    }
+  ]
+}

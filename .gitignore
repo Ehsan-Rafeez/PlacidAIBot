@@ -1,0 +1,32 @@
+
+# Virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# API secrets
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Local vector database
+chroma_db/
+
+# Scraped content
+data/raw/
+data/processed/
+
+# Logs
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/

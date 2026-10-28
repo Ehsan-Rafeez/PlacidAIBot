@@ -1,0 +1,34 @@
+
+# LangChain Framework
+langchain
+langchain-core
+
+# Groq LLM Integration
+langchain-groq
+
+# Local Embeddings
+langchain-huggingface
+sentence-transformers
+
+# Vector Database
+langchain-chroma
+chromadb
+
+# Document Chunking
+langchain-text-splitters
+
+# Website Scraping
+requests
+beautifulsoup4
+
+# Frontend
+streamlit
+
+# Environment Variables
+python-dotenv
+
+# Data Validation
+pydantic
+
+# Testing
+pytest
