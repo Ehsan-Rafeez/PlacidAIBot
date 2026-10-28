@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from langchain_core.documents import Document
 
-from src.chatbot import ask_chatbot, answer_listed_prices
+from src.chatbot import ask_chatbot, answer_listed_prices, build_search_query
 from src.config import BASE_DIR
 from src.safety import price_association_supported
 
@@ -95,3 +95,57 @@ def test_all_named_treatments_must_match_their_price_row():
         "Breast Cancer and Prostate Cancer cost $18,995.",
         "Breast Cancer | $18995\nProstate Cancer | $50",
     )
+
+
+HISTORY = [{"role": "user", "content": "What treatments are available at ITC?"}]
+
+
+@pytest.mark.parametrize("question,history", [
+    ("prices for breast cancer treatment", HISTORY),
+    ("What is the price of breast cancer treatment?", HISTORY),
+    ("price for breast cancer at ITC?", []),
+    ("Prices for Breast Cancer Treatment at ITC Immunity Therapy Center", []),
+])
+def test_specific_price_selects_only_matching_row(question, history):
+    result = answer_listed_prices(question, evidence(
+        "Breast Cancer | Breast Cancer | $18995 | Chat\n"
+        "Prostate Cancer | Prostate Cancer | $20000 | Chat"
+    ), history)
+    assert result["status"] == "answered"
+    assert "Breast Cancer: USD 18,995" in result["answer"]
+    assert "Prostate" not in result["answer"]
+    assert result["sources"][0]["url"] == URL
+
+
+@pytest.mark.parametrize("question,history", [
+    ("prices for breast cancer treatment", []),
+    ("prices for breast cancer treatment", [{"role": "assistant", "content": "ITC"}]),
+    ("prices for breast cancer treatment", HISTORY + [{"role": "user", "content": "What about another clinic?"}]),
+    ("prices for breast cancer treatment", [{"role": "user", "content": "Compare ITC versus another clinic"}]),
+    ("prices for breast cancer treatment at another clinic", HISTORY),
+    ("Does breast cancer treatment cost $50 at ITC?", HISTORY),
+    ("prices for adrenal cancer treatment at ITC", []),
+])
+def test_specific_lookup_does_not_infer_unsupported_provider_or_treatment(question, history):
+    assert answer_listed_prices(question, evidence(
+        "Breast Cancer | Breast Cancer | $18995 | Chat"
+    ), history) is None
+
+
+def test_followup_uses_table_without_groq_and_preserves_qualifier():
+    item = evidence("Breast Cancer | Breast Cancer | starting from $18995 | Chat")[1]
+    document = Document(page_content=item["content"], metadata={"source": URL, "title": item["title"]})
+    with patch("src.chatbot.retrieve_documents", return_value=[(document, 0.1)]) as retrieve, patch(
+        "src.chatbot.get_llm", side_effect=AssertionError("Must answer from retrieved table")
+    ):
+        result = ask_chatbot("prices for breast cancer treatment", HISTORY)
+    assert result["status"] == "answered"
+    assert "starting from USD 18,995" in result["answer"]
+    assert result["sources"][0]["url"] == URL
+    query = retrieve.call_args.args[0]
+    assert "ITC" in query and "breast cancer" in query and "price list" in query
+
+
+def test_ordinary_followup_query_remains_contextual():
+    query = build_search_query("And what about recovery time?", HISTORY)
+    assert "Previous user question" in query and "recovery time" in query

@@ -202,6 +202,45 @@ def get_approved_urls():
 # 4. Build query with conversation context
 # -------------------------------------------------
 
+def itc_price_request(question, history=None):
+    """Return the requested treatment (or '' for the full list).
+
+    Match bounded price questions, not comparisons or user-supplied prices.
+    An implicit provider must come from the latest user question, never
+    from generated assistant content or an unrelated older conversation.
+    """
+    if re.fullmatch(
+        r"what\s+(?:prices|pricing)\s+(?:are|is)\s+listed\s+for\s+"
+        r"(?:ITC|ITC Immunity Therapy Center)\s*\??",
+        question.strip(), re.IGNORECASE,
+    ):
+        return ""
+
+    match = re.fullmatch(
+        r"(?:what\s+(?:is|are)\s+the\s+)?"
+        r"(?:prices?|pricing|costs?)\s+(?:for|of)\s+"
+        r"(?P<treatment>[a-z][a-z &-]*?)"
+        r"(?:\s+at\s+(?P<provider>ITC(?: Immunity Therapy Center)?))?\s*\??",
+        question.strip(), re.IGNORECASE,
+    )
+    if not match:
+        return None
+    if not match.group("provider"):
+        previous = [
+            item["content"] for item in (history or [])
+            if item.get("role") == "user" and isinstance(item.get("content"), str)
+        ]
+        if not previous or not re.search(r"\bITC\b", previous[-1], re.IGNORECASE):
+            return None
+        # Don't carry a provider out of a multi-provider comparison.
+        if re.search(r"\b(?:compare|versus|vs|another|other|Turkey)\b", previous[-1], re.IGNORECASE):
+            return None
+    treatment = re.sub(
+        r"\s+treatments?$", "", match.group("treatment"), flags=re.IGNORECASE
+    )
+    return " ".join(treatment.casefold().split())
+
+
 def build_search_query(question, history=None):
     """
     Recover context for short follow-up questions.
@@ -211,6 +250,10 @@ def build_search_query(question, history=None):
     """
 
     history = history or []
+
+    treatment = itc_price_request(question, history)
+    if treatment is not None:
+        return f"ITC Immunity Therapy Center price list Price in USD {treatment}"
 
     previous_questions = [
         item["content"]
@@ -369,18 +412,14 @@ def get_llm():
     )
 
 
-def answer_listed_prices(question, evidence):
+def answer_listed_prices(question, evidence, history=None):
     """Read explicit ITC price-list rows without asking a model to copy them.
 
-    Only handles requests to list prices, never comparisons, individual
-    treatment quotes, or prices supplied by the user. Missing/ambiguous
-    tables continue through the usual grounded generation path.
+    Handles list requests and treatment-specific price follow-ups with
+    an established ITC context. Never treats a listing as a final quote.
     """
-    if not re.fullmatch(
-        r"what\s+(?:prices|pricing)\s+(?:are|is)\s+listed\s+for\s+"
-        r"(?:ITC|ITC Immunity Therapy Center)\s*\??",
-        question.strip(), re.IGNORECASE,
-    ):
+    requested_treatment = itc_price_request(question, history)
+    if requested_treatment is None:
         return None
 
     approved_urls = get_approved_urls()
@@ -407,6 +446,8 @@ def answer_listed_prices(question, evidence):
             treatment, _, price, _ = cells
             # Unlabelled rows must never acquire a treatment association.
             if not treatment:
+                continue
+            if requested_treatment and " ".join(treatment.casefold().split()) != requested_treatment:
                 continue
             if not re.fullmatch(
                 r"(?:(?:starting from|from|approximately)\s+)?"
@@ -612,7 +653,7 @@ def ask_chatbot(question, history=None):
                 status="unknown"
             )
 
-        listed_prices = answer_listed_prices(question, evidence)
+        listed_prices = answer_listed_prices(question, evidence, history)
         if listed_prices is not None:
             return listed_prices
 
